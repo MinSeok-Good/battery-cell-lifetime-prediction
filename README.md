@@ -82,4 +82,3 @@ python g1_diagnostics.py
 
 주요 출력은 `battery_results/`에 저장된다. `model.joblib`은 실행 시 생성되며 저장소에는 포함하지 않았다. 저장된 모델을 다른 스크립트에서 불러올 때 `feature_builder.py`가 같은 Python 경로에 있어야 한다.
 
-분석 코드와 문서 작성에는 AI 도구를 사용했다. 원본 데이터의 측정 절차, 피처 생성 시점, 실제 운영 조건에 대한 검증은 별도로 필요하다.
