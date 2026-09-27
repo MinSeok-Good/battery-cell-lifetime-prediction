@@ -1,0 +1,63 @@
+{
+  "train_n": 178,
+  "test_n": 47,
+  "train_groups": 48,
+  "test_groups": 12,
+  "test_groups_names": [
+    "G1",
+    "G16",
+    "G22",
+    "G23",
+    "G41",
+    "G44",
+    "G53",
+    "G54",
+    "G56",
+    "G59",
+    "G62",
+    "G7"
+  ],
+  "target_train": {
+    "min": 4.663,
+    "max": 53.541,
+    "mean": 15.923303370786517
+  },
+  "target_test": {
+    "min": 3.724,
+    "max": 60.891,
+    "mean": 19.62974468085106
+  },
+  "best": {
+    "variant": "lean",
+    "model": "svr",
+    "params": {
+      "C": 10,
+      "cache_size": 200,
+      "coef0": 0.0,
+      "degree": 3,
+      "epsilon": 1,
+      "gamma": 0.01,
+      "kernel": "rbf",
+      "max_iter": -1,
+      "shrinking": true,
+      "tol": 0.001,
+      "verbose": false
+    }
+  },
+  "test": {
+    "MAE": 3.581513752514516,
+    "RMSE": 6.892646823168911,
+    "R2": 0.6722012988288728
+  },
+  "baseline_test": {
+    "MAE": 8.897287234042553,
+    "RMSE": 13.446754661659112,
+    "R2": -0.24758498379647764
+  },
+  "train_group_oof": {
+    "MAE": 3.132182484491552,
+    "RMSE": 4.89164457765098,
+    "R2": 0.6454635434810747
+  },
+  "train_random_cell_cv_MAE": 2.944538014998188
+}

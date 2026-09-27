@@ -1,0 +1,30 @@
+feature,importance_MAE,std
+mean_dqdv_dchg_mid_3_0,1.4396494282165784,0.34520097935845906
+DoD,1.4084034654690505,0.25916122396193947
+avg_stress,1.3042662695695744,0.294474941211972
+CV_time_0,0.5557936647608298,0.13021127829305632
+mean_deltaQ_dchg_3_0,0.47278835745678294,0.18204099500611823
+CV_time_3,0.2709313080267487,0.07443956537489173
+capacity_fade_3_0,0.2067551566106486,0.11635781508591232
+Q_initial,0.056585645922640614,0.062455091959414295
+Chg C-rate,0.053590443552966896,0.027441514883723154
+delta_CV_time_3_0,0.0,0.0
+Q_ini_V_high,0.0,0.0
+Q_ini_V_mid,0.0,0.0
+Q_ini_V_low,0.0,0.0
+mean_dqdv_dchg_high_3_0,0.0,0.0
+var_deltaQ_dchg_3_0,0.0,0.0
+var_dqdv_dchg_low_3_0,0.0,0.0
+var_dqdv_dchg_3_0,0.0,0.0
+mean_dqdv_dchg_low_3_0,0.0,0.0
+var_dqdv_dchg_mid_3_0,0.0,0.0
+var_dqdv_dchg_high_3_0,0.0,0.0
+mean_dqdv_dchg_3_0,0.0,0.0
+delta_Q_DVA4,0.0,0.0
+delta_Q_DVA1,0.0,0.0
+delta_Q_DVA3,0.0,0.0
+delta_Q_DVA2,0.0,0.0
+dchg_stress,0.0,0.0
+chg_stress,0.0,0.0
+multi_stress,0.0,0.0
+Dchg C-rate,-0.001748592960855655,0.05916839559691326
