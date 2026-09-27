@@ -1,76 +1,83 @@
-# 배터리 셀 수명 예측 분석
+# 배터리 셀 수명 예측 | 실험군 단위 검증
 
-> AI 보조 분석 초안입니다. 데이터 출처와 타깃 정의, 예측 시점의 피처 가용성은 프로젝트 소유자가 검증해야 합니다.
+초기 열화 특성과 충·방전 조건으로 배터리 셀의 수명(`Lifetime`)을 예측했다. 같은 실험군의 셀은 조건과 특성이 유사하므로 **실험군을 통째로 분리**해 새로운 조건에 대한 성능을 평가했다.
 
-## 원본 데이터 출처
+| 항목 | 결과 |
+|---|---|
+| 데이터 | 225개 셀 · 60개 실험군 · 원본 열 32개 |
+| 최종 모델 | 핵심 피처 10개 + 표준화 + RBF-SVR |
+| 훈련군 내부 4-fold GroupKFold | MAE **3.127** |
+| 보류한 12개 실험군(47개 셀) | MAE **3.582** · RMSE **6.893** · R² **0.672** |
+| 같은 보류군의 중앙값 예측 기준선 | MAE **8.897** |
 
-- `upload/feature_all.csv`는 Tingkai Li, Zihao Zhou, Adam Thelen, David Howey, Chao Hu의 [Early prediction of battery lifetime 저장소](https://github.com/tingkai-li/early-prediction-varying-usage-data)의 [동일한 원본 파일](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/feature_extraction/feature_all.csv)이다. Git blob SHA `6a86cea3f3c0ae3d859cdc8c79dc9ace9da7e1b3`로 동일성을 확인했다.
-- 원본 저장소의 [LICENSE](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/LICENSE)는 CC0 1.0이다. 원시 실험 자료는 원본 README에 안내된 [ISU-ILCC Battery Aging Dataset](https://doi.org/10.25380/iastate.22582234)을 참조한다.
-- 본 저장소의 분석과 모델 선택은 위 논문의 결과를 재현한 것이 아니라, 공개 피처 표를 사용해 별도로 탐색한 결과다.
+> MAE와 RMSE는 원본 `Lifetime` 값의 단위다. CSV에 시간 단위가 명시되어 있지 않아 시간·일·개월 등으로 환산하지 않았다. 이 결과는 **공개 데이터에 대한 탐색적 검증**이며 실제 배터리 수명 보증 성능을 뜻하지 않는다.
 
+![수명 분포, DoD와 수명, 보류군 예측, 변수 순열 민감도](eda_and_validation.png)
 
-## 데이터와 질문
+## 문제와 데이터
 
-- 파일: `feature_all.csv`, 225개 셀, 60개 실험군, 열 32개.
-- 타깃: `Lifetime` 연속값. 원본 [피처 추출 코드](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/feature_extraction/feature_extraction.py)는 용량이 0.2에 도달하는 시점을 보간해 수명을 산출한다. CSV에 시간 단위가 명시되지 않아 오차는 원본 `Lifetime` 단위로 표현한다.
-- 식별자 `Cell`, `Group`과 타깃은 입력 피처에서 제외했다. `Group`은 같은 실험 조건의 반복 측정을 묶어 검증에 사용했다.
-- 누락값, 중복 셀, 완전 중복 행은 없다. `Lifetime`의 중앙값 14.387, 범위 3.724–60.891; 높은 값의 꼬리가 길다.
-- `delta_CV_time_3_0`는 두 CV 시간의 차이, `avg_stress`는 충·방전 스트레스 평균, `multi_stress`는 두 스트레스의 곱으로 수치상 재현된다. 동시 투입 시 정보가 중복될 수 있다.
+원본 데이터는 Li *et al.*의 [Predicting Battery Lifetime Under Varying Usage Conditions from Early Aging Data](https://github.com/tingkai-li/early-prediction-varying-usage-data) 저장소에 공개된 [`feature_all.csv`](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/feature_extraction/feature_all.csv)다. 이 저장소의 [`upload/feature_all.csv`](upload/feature_all.csv)는 원본과 바이트 단위로 동일하다(Git blob SHA: `6a86cea3f3c0ae3d859cdc8c79dc9ace9da7e1b3`). 원본 저장소의 라이선스는 [CC0 1.0](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/LICENSE)이며, 원시 실험 자료는 [ISU-ILCC Battery Aging Dataset](https://doi.org/10.25380/iastate.22582234)을 참조한다.
 
-![분포, DoD 관계, 예측 검증, 변수 민감도](eda_and_validation.png)
+원본 [피처 추출 코드](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/feature_extraction/feature_extraction.py)는 보간한 용량이 0.2에 도달하는 시점을 `Lifetime`으로 산출한다. 이 프로젝트는 논문의 모델·실험 분할을 재현한 것이 아니라, **공개 피처 표를 사용해 별도로 모델을 비교한 분석**이다.
+
+- **입력:** 충·방전율, 방전 깊이(DoD), 초기 용량, CV 시간과 초기 열화 관련 지표 등
+- **타깃:** 셀별 `Lifetime` 연속값
+- **단위:** 셀 225개, 실험군 60개. `Cell`·`Group`은 모델 입력에서 제외하고, `Group`은 검증 분할에만 사용
+- **기본 점검:** 결측값·중복 셀·완전 중복 행 없음. 타깃 중앙값 14.387, 범위 3.724–60.891
 
 ## 검증 설계
 
-`GroupShuffleSplit(random_state=42)`으로 48개 군 178개 셀을 탐색에 쓰고, **별도의 12개 군 47개 셀**을 마지막 평가에 사용했다. 훈련 군에만 4분할 `GroupKFold`를 적용하여 MAE가 가장 낮은 조합을 선택했다. 보류군은 튜닝에 사용하지 않았다.
+1. `GroupShuffleSplit(random_state=42)`으로 **48개 군·178개 셀**을 개발용으로, **12개 군·47개 셀**을 최종 평가용으로 분리했다.
+2. 개발용 데이터에서만 4-fold `GroupKFold`로 피처 조합과 모델 하이퍼파라미터를 선택했다. 기준 지표는 MAE다.
+3. 선택한 모델을 개발용 데이터 전체에 재학습한 뒤, 분리해 둔 12개 군에서 한 번 평가했다.
 
-## 피처 엔지니어링과 탐색
+같은 군의 셀이 학습과 검증에 함께 들어가는 무작위 셀 분할은 이 프로젝트의 목표인 **처음 보는 실험 조건**의 성능을 평가하기에 적합하지 않다. 선택 모델의 개발용 데이터에서 무작위 셀 CV MAE는 2.945, 그룹 CV 재예측 MAE는 3.132였다. 두 수치의 차이만으로 누수를 증명하는 것은 아니지만, 분할 방식에 따라 결과가 달라짐을 보여준다.
 
-| 피처 조합 | 내용 |
-|---|---|
-| operational | 충·방전 조건, DoD, 초기 용량과 전압 구간, 최초 CV 시간, 스트레스 (초기 3회 변화량 제외) |
-| lean | 조건·DoD·초기 용량·CV 시간 0/3·용량 감소·방전 변화량·중간 전압 dQ/dV·평균 스트레스 10개 |
-| raw | 식별자와 타깃 제외 모든 수치 29개 |
-| engineered | raw + DoD 대비 감소량, CV 시간비, C-rate 비와 합, 용량 구간 차이, DVA 절댓값 합, dQ/dV 및 스트레스 차이 등 11개 |
+## 피처 선택과 모델 탐색
 
-Ridge, RBF-SVR, ExtraTrees, HistGradientBoosting의 하이퍼파라미터 격자를 조합마다 탐색했다. 상위 결과는 다음과 같다. 점수는 **훈련 군 내부**의 평균 그룹 CV MAE다.
+식별자·타깃을 뺀 수치 29개를 그대로 사용하는 경우부터 초기 측정값을 줄인 경우, 비율·차이·상호작용을 추가한 경우까지 **피처 조합 4종**을 비교했다. 각 조합에 Ridge, RBF-SVR, ExtraTrees, HistGradientBoosting **모델 4종**의 하이퍼파라미터 격자를 적용했다.
 
-| 피처 | 모델 | CV MAE |
-|---|---|---:|
-| lean | svr | 3.127 |
-| engineered | extra_trees | 3.157 |
-| raw | extra_trees | 3.198 |
-| raw | svr | 3.226 |
-| lean | extra_trees | 3.232 |
-| operational | extra_trees | 3.305 |
-| engineered | svr | 3.320 |
-| lean | hist_gb | 3.326 |
+| 피처 조합 | 구성 | 해당 조합의 최고 모델 | 그룹 CV MAE |
+|---|---|---|---:|
+| `lean` | 조건·초기 용량·CV 시간·초기 열화 지표 등 10개 | **RBF-SVR** | **3.127** |
+| `engineered` | 원본 29개 + 파생 피처 11개 | ExtraTrees | 3.157 |
+| `raw` | 수치 피처 29개 | ExtraTrees | 3.198 |
+| `operational` | 초기 3회 변화량을 제외한 조건·초기 측정 피처 | ExtraTrees | 3.305 |
 
-선택 모델: **lean + RBF-SVR**, `C=10`, `epsilon=1`, `gamma=0.01`; 입력은 표준화했고, 모든 전처리는 학습 fold 내부에서만 적합했다. 이 탐색에서는 복잡한 파생 피처가 MAE를 줄이지 못했다. `operational` 최상위 CV MAE는 3.305로, 초기 3회 자료가 없을 때 참고할 수 있다. 다만 초기 3회 지표의 생성 시점과 실사용 시점이 같아야 한다.
+선택 모델은 `lean` 피처의 **RBF-SVR**(`C=10`, `epsilon=1`, `gamma=0.01`)이다. 10개 입력은 `Chg C-rate`, `Dchg C-rate`, `DoD`, `Q_initial`, `CV_time_0`, `CV_time_3`, `capacity_fade_3_0`, `mean_deltaQ_dchg_3_0`, `mean_dqdv_dchg_mid_3_0`, `avg_stress`다. 표준화와 결측 처리기는 파이프라인에 넣어 학습 fold에서만 적합했다. 이번 탐색에서 파생 피처 11개를 추가한 조합은 선택 모델보다 MAE가 낮지 않았다.
 
-## 마지막 평가: 보지 않은 실험군
+전체 설정과 점수는 [`model_search.csv`](model_search.csv)에 있다. 위 CV 점수는 동일한 개발 데이터에서 여러 후보를 비교해 얻은 값이므로 낙관적일 수 있다.
 
-| 방법 | MAE | RMSE | R² |
+## 최종 평가와 실패 사례
+
+| 방법 | 보류군 MAE ↓ | RMSE ↓ | R² ↑ |
 |---|---:|---:|---:|
-| 중앙값 기준선 | 8.897 | 13.447 | -0.248 |
-| 선택 모델 | **3.582** | 6.893 | 0.672 |
+| 개발용 타깃 중앙값 예측 | 8.897 | 13.447 | -0.248 |
+| 선택한 RBF-SVR | **3.582** | **6.893** | **0.672** |
 
-훈련 군의 4분할 그룹 CV 재예측 MAE는 3.132이고, 같은 셀을 무작위로 나눈 CV MAE는 2.945다. 후자는 형제 셀이 양쪽에 섞일 수 있어 신규 실험군 성능을 뜻하지 않는다.
+**가장 큰 실패는 `G1`이다.** 이 군의 평균 절대오차는 17.66이고, 최고 수명 셀의 실제값 60.891에 대한 예측은 31.47이다. `G1`을 제외한 보류 셀의 MAE는 2.27이지만, 이는 오류 원인을 살펴보기 위한 **사후 분석값**이며 대표 성능으로 제시하지 않는다. 모델은 특히 장수명 조건을 과소예측할 위험이 있다. 학습 데이터의 최고 수명은 53.541이었다.
 
-보류군 12개를 재표본한 탐색적 군 단위 bootstrap의 MAE 범위(2.5–97.5%)는 **1.70–6.53**다. 군 수가 작아 정확한 모집단 신뢰구간으로 해석하면 안 된다.
+보류군 12개를 재표본한 군 단위 bootstrap에서 MAE의 2.5–97.5% 범위는 **1.70–6.53**이다. 표본 군이 적어 성능 추정이 크게 흔들릴 수 있으며, 이 범위를 정밀한 모집단 신뢰구간으로 해석하지 않는다. 셀별 결과는 [`holdout_predictions.csv`](holdout_predictions.csv)에서 확인할 수 있다.
 
-가장 큰 실패는 `G1`: 평균 절대오차 17.66, 해당 군을 제외한 보류 셀의 MAE 2.27. 최고 수명 셀 60.891에 대한 예측은 31.47였다. 학습 최고 수명은 53.541이며, 고수명 영역은 특히 과소예측 위험이 있다. 아래 결과를 활용할 때 높은 수명값에 대한 범위 외삽으로 간주해야 한다.
+보류군 순열 중요도에서 `mean_dqdv_dchg_mid_3_0`, `DoD`, `avg_stress`의 민감도가 높았다. 서로 연관된 입력이 있어 순위는 불안정하며 인과 효과를 뜻하지 않는다([전체 결과](holdout_permutation_importance.csv)).
 
-보류군 변수 순열 민감도 상위는 `mean_dqdv_dchg_mid_3_0`, `DoD`, `avg_stress`다. 이 지표는 서로 상관된 변수들 사이에서 순위가 흔들리며 **인과적 영향이나 물리적 중요도는 아니다**.
+## 적용 전 확인할 사항
 
-## 다음 데이터 확보 및 적용 조건
+- **피처 가용 시점:** `CV_time_3` 등 초기 측정값이 실제 예측 시점에 확보되는지 원본 추출 과정과 운영 절차를 대조해야 한다.
+- **고수명 조건:** `G1`의 실험 조건·측정 품질·유사 군과의 차이를 확인하고, 독립적인 장수명 실험군으로 과소예측을 재검증해야 한다.
+- **현장 의사결정:** 허용 오차와 과소·과대예측 비용을 정한 뒤, 별도 배치나 장비의 데이터에서 검증해야 한다. 이 단계 전에는 수명 보증이나 충전 조건 추천에 사용하지 않는다.
 
-1. 원본 시간 단위와 3회 변화량 계산 시점, 각 파생 피처의 생성 코드를 확인한다. 예측 시점 이후 정보가 섞이면 이 평가를 다시 해야 한다.
-2. 고수명 조건의 독립 실험군을 늘려 `G1` 같은 사례의 과소예측을 점검한다. 같은 군의 반복 셀만 추가하면 신규 조건 일반화 검증에는 도움이 적다.
-3. 특정 충·방전 조건을 추천하거나 수명을 보증하는 의사결정에는 독립된 신규 배치 또는 장비 데이터를 더 모아 검증한다.
+## 재현 방법
 
-## 데이터 공개 및 재현
+`upload/feature_all.csv`가 포함되어 있다. 저장소 루트에서 다음을 실행하면 모델 탐색과 보고서 그림을 다시 생성한다.
 
-원본과 동일한 `feature_all.csv`를 `upload/feature_all.csv`에 포함했다. `model.joblib`은 공개용에서 제외했다. 모델을 재생성하려면 아래 명령을 실행한다.
+```bash
+python -m pip install -r requirements.txt
+python battery_lifetime_analysis.py
+python make_battery_report.py
+```
 
+주요 출력은 `battery_results/`에 저장된다. `model.joblib`은 실행 시 생성되며 저장소에는 포함하지 않았다. 저장된 모델을 다른 스크립트에서 불러올 때 `feature_builder.py`가 같은 Python 경로에 있어야 한다.
 
-`python battery_lifetime_analysis.py` 다음 `python make_battery_report.py` 실행. 원본 `feature_all.csv`는 실행 파일과 같은 위치의 `upload/` 폴더에 둔다. Python의 pandas, numpy, scipy, scikit-learn, matplotlib, joblib이 필요하다. `model.joblib`을 재생성한 뒤 로딩할 때 같은 폴더의 `feature_builder.py`가 필요하다. `model_search.csv`에 전체 탐색 결과, `holdout_predictions.csv`에 셀별 예측, `metrics.json`에 평가지표가 있다.
+분석 코드와 문서 작성에는 AI 도구를 사용했다. 원본 데이터의 측정 절차, 피처 생성 시점, 실제 운영 조건에 대한 검증은 별도로 필요하다.
+
