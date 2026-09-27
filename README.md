@@ -2,11 +2,17 @@
 
 > AI 보조 분석 초안입니다. 데이터 출처와 타깃 정의, 예측 시점의 피처 가용성은 프로젝트 소유자가 검증해야 합니다.
 
+## 원본 데이터 출처
+
+- `upload/feature_all.csv`는 Tingkai Li, Zihao Zhou, Adam Thelen, David Howey, Chao Hu의 [Early prediction of battery lifetime 저장소](https://github.com/tingkai-li/early-prediction-varying-usage-data)의 [동일한 원본 파일](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/feature_extraction/feature_all.csv)이다. Git blob SHA `6a86cea3f3c0ae3d859cdc8c79dc9ace9da7e1b3`로 동일성을 확인했다.
+- 원본 저장소의 [LICENSE](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/LICENSE)는 CC0 1.0이다. 원시 실험 자료는 원본 README에 안내된 [ISU-ILCC Battery Aging Dataset](https://doi.org/10.25380/iastate.22582234)을 참조한다.
+- 본 저장소의 분석과 모델 선택은 위 논문의 결과를 재현한 것이 아니라, 공개 피처 표를 사용해 별도로 탐색한 결과다.
+
 
 ## 데이터와 질문
 
 - 파일: `feature_all.csv`, 225개 셀, 60개 실험군, 열 32개.
-- 타깃: `Lifetime` 연속값. **단위와 수명 종료 기준은 CSV만으로 확인되지 않으므로** 오차도 원본 `Lifetime` 단위로 표현한다.
+- 타깃: `Lifetime` 연속값. 원본 [피처 추출 코드](https://github.com/tingkai-li/early-prediction-varying-usage-data/blob/main/feature_extraction/feature_extraction.py)는 용량이 0.2에 도달하는 시점을 보간해 수명을 산출한다. CSV에 시간 단위가 명시되지 않아 오차는 원본 `Lifetime` 단위로 표현한다.
 - 식별자 `Cell`, `Group`과 타깃은 입력 피처에서 제외했다. `Group`은 같은 실험 조건의 반복 측정을 묶어 검증에 사용했다.
 - 누락값, 중복 셀, 완전 중복 행은 없다. `Lifetime`의 중앙값 14.387, 범위 3.724–60.891; 높은 값의 꼬리가 길다.
 - `delta_CV_time_3_0`는 두 CV 시간의 차이, `avg_stress`는 충·방전 스트레스 평균, `multi_stress`는 두 스트레스의 곱으로 수치상 재현된다. 동시 투입 시 정보가 중복될 수 있다.
@@ -58,13 +64,13 @@ Ridge, RBF-SVR, ExtraTrees, HistGradientBoosting의 하이퍼파라미터 격자
 
 ## 다음 데이터 확보 및 적용 조건
 
-1. `Lifetime`의 단위·수명 종료 기준, 3회 변화량 계산 시점, 각 파생 피처의 생성 코드를 확인한다. 예측 시점 이후 정보가 섞이면 이 평가를 다시 해야 한다.
+1. 원본 시간 단위와 3회 변화량 계산 시점, 각 파생 피처의 생성 코드를 확인한다. 예측 시점 이후 정보가 섞이면 이 평가를 다시 해야 한다.
 2. 고수명 조건의 독립 실험군을 늘려 `G1` 같은 사례의 과소예측을 점검한다. 같은 군의 반복 셀만 추가하면 신규 조건 일반화 검증에는 도움이 적다.
 3. 특정 충·방전 조건을 추천하거나 수명을 보증하는 의사결정에는 독립된 신규 배치 또는 장비 데이터를 더 모아 검증한다.
 
 ## 데이터 공개 및 재현
 
-원본 `feature_all.csv`는 데이터 출처와 재배포 권한이 확인되지 않아 이 공개용 폴더에 포함하지 않았다. 재현할 때 합법적으로 확보한 동일한 파일을 `upload/feature_all.csv`에 넣는다. `model.joblib`도 공개용에서 제외했다. 모델을 재생성하려면 아래 명령을 실행한다.
+원본과 동일한 `feature_all.csv`를 `upload/feature_all.csv`에 포함했다. `model.joblib`은 공개용에서 제외했다. 모델을 재생성하려면 아래 명령을 실행한다.
 
 
 `python battery_lifetime_analysis.py` 다음 `python make_battery_report.py` 실행. 원본 `feature_all.csv`는 실행 파일과 같은 위치의 `upload/` 폴더에 둔다. Python의 pandas, numpy, scipy, scikit-learn, matplotlib, joblib이 필요하다. `model.joblib`을 재생성한 뒤 로딩할 때 같은 폴더의 `feature_builder.py`가 필요하다. `model_search.csv`에 전체 탐색 결과, `holdout_predictions.csv`에 셀별 예측, `metrics.json`에 평가지표가 있다.
